@@ -586,7 +586,7 @@
                     }
                     const filename = `${cleanPhone}.m3u`;
                     
-                    const playlistUrl = 'https://moe-iptv.vercel.app/sample.m3u';
+                    const playlistUrl = 'https://raw.githubusercontent.com/kyiv14/moe-iptv/main/sample.m3u';
                     const response = await fetch(playlistUrl);
                     let content = await response.text();
                     content = content.replace(/\/iptv\/\w+\//g, `/iptv/${key}/`);
