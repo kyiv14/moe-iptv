@@ -566,16 +566,11 @@
                     }
                 });
                 
-                if (response.status === 404) {
-                    return null; // Файл не существует
+                if (response.ok) {
+                    const data = await response.json();
+                    return data.sha;
                 }
-                
-                if (!response.ok) {
-                    throw new Error(`GitHub API error: ${response.status}`);
-                }
-                
-                const data = await response.json();
-                return data.sha;
+                return null;
             } catch (error) {
                 console.error('Ошибка при получении SHA файла:', error);
                 return null;
@@ -596,22 +591,10 @@
                     let content = await response.text();
                     content = content.replace(/\/iptv\/\w+\//g, `/iptv/${key}/`);
                     
-                    // Получаем SHA существующего файла
-                    const sha = await getFileSha(filename);
+                    // Получаем SHA существующего файла, если он есть
+                    const sha = await getFileSha(`public/${filename}`);
                     
-                    // Формируем тело запроса
-                    const requestBody = {
-                        message: `Добавлен плейлист: ${cleanPhone}`,
-                        content: btoa(unescape(encodeURIComponent(content))),
-                        branch: REPO_CONFIG.branch
-                    };
-
-                    // Добавляем SHA только если файл существует
-                    if (sha) {
-                        requestBody.sha = sha;
-                    }
-
-                    const apiUrl = `https://api.github.com/repos/${REPO_CONFIG.owner}/${REPO_CONFIG.repo}/contents/public/${filename}`;
+                    const apiUrl = `https://api.github.com/repos/${REPO_CONFIG.owner}/${REPO_CONFIG.repo}/contents/${filename}`;
                     const uploadResponse = await fetch(apiUrl, {
                         method: 'PUT',
                         headers: {
@@ -619,7 +602,12 @@
                             'Content-Type': 'application/json',
                             'Accept': 'application/vnd.github+json'
                         },
-                        body: JSON.stringify(requestBody)
+                        body: JSON.stringify({
+                            message: `Добавлен плейлист: ${cleanPhone}`,
+                            content: btoa(unescape(encodeURIComponent(content))),
+                            branch: REPO_CONFIG.branch,
+                            sha: sha // Добавляем SHA, если файл существует
+                        })
                     });
                     
                     if (!uploadResponse.ok) {
@@ -755,7 +743,7 @@
             document.getElementById('fileBtn').addEventListener('click', () => {
                 if (currentClientId !== null) {
                     const client = clients[currentClientId];
-                    const url = `https://raw.githubusercontent.com/${REPO_CONFIG.owner}/${REPO_CONFIG.repo}/${REPO_CONFIG.branch}/public/${client.phone}.m3u`;
+                    const url = `https://raw.githubusercontent.com/${REPO_CONFIG.owner}/${REPO_CONFIG.repo}/${REPO_CONFIG.branch}/${client.phone}.m3u`;
                     forceDownload(url, `${client.phone}.m3u`);
                 }
             });
