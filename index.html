@@ -406,9 +406,9 @@
         const TOKEN_PARTS = ["ghp_to27A4", "Q0SrXyfBANG1", "fxQvzyhhgwrn0rm1ra"];
         const REPO_CONFIG = {
             owner: "kyiv14",
-            repo: "moe-iptv",  // Исправлено с moe.iptv на moe-iptv
+            repo: "moe-iptv",
             branch: "main",
-            clientsFile: "clients.json"
+            clientsFile: "public/clients.json"
         };
 
         // Хранилище клиентов
@@ -666,7 +666,7 @@
                     if (cleanPhone.length < 10) {
                         throw new Error("Номер должен содержать минимум 10 цифр");
                     }
-                    const filename = `${cleanPhone}.m3u`;
+                    const filename = `public/${cleanPhone}.m3u`;
                     
                     const playlistUrl = 'https://moe-iptv.vercel.app/sample.m3u';
                     const response = await fetch(playlistUrl);
@@ -780,7 +780,7 @@
                     
                     showStatus(
                         `Плейлист успешно создан!<br>
-                        <span class="download-link" onclick="forceDownload('${tempUrl}', '${filename}')">Скачать ${filename}</span>`,
+                        <span class="download-link" onclick="forceDownload('${tempUrl}', '${filename.split('/').pop()}')">Скачать ${filename.split('/').pop()}</span>`,
                         "success"
                     );
                     
@@ -834,7 +834,7 @@
             document.getElementById('fileBtn').addEventListener('click', () => {
                 if (currentClientId !== null) {
                     const client = clients[currentClientId];
-                    const url = `https://raw.githubusercontent.com/${REPO_CONFIG.owner}/${REPO_CONFIG.repo}/${REPO_CONFIG.branch}/${client.phone}.m3u`;
+                    const url = `https://raw.githubusercontent.com/${REPO_CONFIG.owner}/${REPO_CONFIG.repo}/${REPO_CONFIG.branch}/public/${client.phone}.m3u`;
                     forceDownload(url, `${client.phone}.m3u`);
                 }
             });
