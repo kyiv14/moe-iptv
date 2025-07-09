@@ -105,19 +105,19 @@
         }
         .client-card h3 {
             margin: 0 0 5px 0;
-            font-size: 20px;
+            font-size: 22px;
             color: var(--system-blue);
         }
         .client-card p {
             margin: 0;
-            font-size: 20px;
+            font-size: 22px;
             color: var(--system-gray);
         }
         .days-left {
             position: absolute;
             top: 16px;
             right: 16px;
-            font-size: 20px;
+            font-size: 22px;
             font-weight: 500;
         }
         .days-left.positive {
@@ -252,13 +252,68 @@
             height: 24px;
             object-fit: contain;
         }
+        .auth-modal {
+            display: flex;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.5);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+        }
+        .auth-container {
+            background: white;
+            width: 90%;
+            max-width: 400px;
+            border-radius: 14px;
+            padding: 20px;
+            animation: modalOpen 0.3s ease-out;
+        }
+        .auth-input {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #D1D1D6;
+            border-radius: 8px;
+            font-size: 17px;
+            margin-bottom: 12px;
+        }
+        .auth-error {
+            color: var(--system-red);
+            margin-bottom: 12px;
+            text-align: center;
+            display: none;
+        }
+        .clients-counter {
+            text-align: center;
+            margin-bottom: 15px;
+            font-weight: 500;
+        }
+        .clients-counter span {
+            font-size: 22px;
+            color: var(--system-blue);
+        }
     </style>
 </head>
 <body>
-    <div class="container">
+    <div id="authModal" class="auth-modal">
+        <div class="auth-container">
+            <h2 style="text-align: center; margin-bottom: 20px;">Авторизация</h2>
+            <input type="text" id="loginInput" class="auth-input" placeholder="Логин">
+            <input type="password" id="passwordInput" class="auth-input" placeholder="Пароль">
+            <div id="authError" class="auth-error">Неверный логин или пароль</div>
+            <button id="authButton">Войти</button>
+        </div>
+    </div>
+
+    <div class="container" id="appContainer" style="display: none;">
         <div class="header">
             <h1>IPTV Manager</h1>
         </div>
+        
+        <div class="clients-counter">Клиентов: <span id="clientsCount">0</span></div>
         
         <div class="buttons">
             <button id="newClientBtn">Новый клиент</button>
@@ -512,6 +567,7 @@
                 localStorage.setItem('iptv_clients', JSON.stringify(clients));
             }
             renderClients();
+            updateClientsCounter();
         }
 
         // Сохранение клиентов (локально и в GitHub)
@@ -519,6 +575,7 @@
             localStorage.setItem('iptv_clients', JSON.stringify(clients));
             try {
                 await saveClientsToGitHub();
+                updateClientsCounter();
             } catch (error) {
                 console.error('Ошибка синхронизации с GitHub:', error);
                 throw error;
@@ -590,6 +647,10 @@
             });
         }
 
+        function updateClientsCounter() {
+            document.getElementById('clientsCount').textContent = clients.length;
+        }
+
         function renderClients(clientsToRender = null) {
             const clientsList = document.getElementById('clientsList');
             clientsList.innerHTML = '';
@@ -614,6 +675,8 @@
                 };
                 clientsList.appendChild(card);
             });
+            
+            updateClientsCounter();
         }
 
         function copyToClipboard(text, event) {
@@ -722,7 +785,28 @@
 
         // Обработчики событий
         document.addEventListener('DOMContentLoaded', () => {
-            initClients();
+            // Проверка авторизации
+            function checkAuth() {
+                const login = document.getElementById('loginInput').value.toLowerCase();
+                const password = document.getElementById('passwordInput').value;
+                
+                if (login === 'zpv' && password === '1975') {
+                    document.getElementById('authModal').style.display = 'none';
+                    document.getElementById('appContainer').style.display = 'block';
+                    initClients();
+                } else {
+                    document.getElementById('authError').style.display = 'block';
+                }
+            }
+
+            document.getElementById('authButton').addEventListener('click', checkAuth);
+            
+            // Обработка нажатия Enter в форме авторизации
+            document.getElementById('passwordInput').addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') {
+                    checkAuth();
+                }
+            });
             
             document.getElementById('newClientBtn').addEventListener('click', () => {
                 const today = new Date().toISOString().split('T')[0];
