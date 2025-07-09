@@ -406,8 +406,9 @@
         const TOKEN_PARTS = ["ghp_to27A4", "Q0SrXyfBANG1", "fxQvzyhhgwrn0rm1ra"];
         const REPO_CONFIG = {
             owner: "kyiv14",
-            repo: "moe-iptv",
-            branch: "main"
+            repo: "moe-iptv",  // Исправлено с moe.iptv на moe-iptv
+            branch: "main",
+            clientsFile: "clients.json"
         };
 
         // Хранилище клиентов
@@ -416,6 +417,112 @@
 
         function getGitHubToken() {
             return TOKEN_PARTS.join('');
+        }
+
+        // Загрузка клиентов из GitHub
+        async function loadClientsFromGitHub() {
+            try {
+                const apiUrl = `https://api.github.com/repos/${REPO_CONFIG.owner}/${REPO_CONFIG.repo}/contents/${REPO_CONFIG.clientsFile}`;
+                const response = await fetch(apiUrl, {
+                    headers: {
+                        'Authorization': `Bearer ${getGitHubToken()}`,
+                        'Accept': 'application/vnd.github+json'
+                    }
+                });
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    const content = atob(data.content);
+                    return JSON.parse(content) || [];
+                } else if (response.status === 404) {
+                    // Файл не существует, создадим его при первом сохранении
+                    return [];
+                }
+                return [];
+            } catch (error) {
+                console.error('Ошибка загрузки клиентов:', error);
+                return [];
+            }
+        }
+
+        // Сохранение клиентов в GitHub
+        async function saveClientsToGitHub() {
+            try {
+                let sha = null;
+                try {
+                    sha = await getFileSha(REPO_CONFIG.clientsFile);
+                } catch (e) {
+                    // Файл не существует, sha останется null
+                }
+                
+                const apiUrl = `https://api.github.com/repos/${REPO_CONFIG.owner}/${REPO_CONFIG.repo}/contents/${REPO_CONFIG.clientsFile}`;
+                const response = await fetch(apiUrl, {
+                    method: 'PUT',
+                    headers: {
+                        'Authorization': `Bearer ${getGitHubToken()}`,
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/vnd.github+json'
+                    },
+                    body: JSON.stringify({
+                        message: 'Обновление списка клиентов',
+                        content: btoa(unescape(encodeURIComponent(JSON.stringify(clients)))),
+                        branch: REPO_CONFIG.branch,
+                        sha: sha
+                    })
+                });
+                
+                if (!response.ok) {
+                    const error = await response.json();
+                    throw new Error(error.message || "Ошибка при сохранении на GitHub");
+                }
+                return true;
+            } catch (error) {
+                console.error('Ошибка сохранения:', error);
+                throw error;
+            }
+        }
+
+        // Получение SHA файла
+        async function getFileSha(filename) {
+            try {
+                const apiUrl = `https://api.github.com/repos/${REPO_CONFIG.owner}/${REPO_CONFIG.repo}/contents/${filename}`;
+                const response = await fetch(apiUrl, {
+                    headers: {
+                        'Authorization': `Bearer ${getGitHubToken()}`,
+                        'Accept': 'application/vnd.github+json'
+                    }
+                });
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    return data.sha;
+                }
+                return null;
+            } catch (error) {
+                console.error('Ошибка при получении SHA:', error);
+                return null;
+            }
+        }
+
+        // Инициализация клиентов (загрузка из GitHub)
+        async function initClients() {
+            const githubClients = await loadClientsFromGitHub();
+            if (githubClients.length > 0) {
+                clients = githubClients;
+                localStorage.setItem('iptv_clients', JSON.stringify(clients));
+            }
+            renderClients();
+        }
+
+        // Сохранение клиентов (локально и в GitHub)
+        async function saveClients() {
+            localStorage.setItem('iptv_clients', JSON.stringify(clients));
+            try {
+                await saveClientsToGitHub();
+            } catch (error) {
+                console.error('Ошибка синхронизации с GitHub:', error);
+                throw error;
+            }
         }
 
         function extractPhoneNumber(phone) {
@@ -469,10 +576,6 @@
 
         function closeModal(modalId) {
             document.getElementById(modalId).style.display = 'none';
-        }
-
-        function saveClients() {
-            localStorage.setItem('iptv_clients', JSON.stringify(clients));
         }
 
         function filterClients(searchText) {
@@ -556,27 +659,6 @@
             openModal('clientInfoModal');
         }
 
-        async function getFileSha(filename) {
-            try {
-                const apiUrl = `https://api.github.com/repos/${REPO_CONFIG.owner}/${REPO_CONFIG.repo}/contents/public/${filename}`;
-                const response = await fetch(apiUrl, {
-                    headers: {
-                        'Authorization': `Bearer ${getGitHubToken()}`,
-                        'Accept': 'application/vnd.github+json'
-                    }
-                });
-                
-                if (response.ok) {
-                    const data = await response.json();
-                    return data.sha;
-                }
-                return null;
-            } catch (error) {
-                console.error('Ошибка при получении SHA файла:', error);
-                return null;
-            }
-        }
-
         function createPlaylist(phone, key) {
             return new Promise(async (resolve, reject) => {
                 try {
@@ -591,8 +673,7 @@
                     let content = await response.text();
                     content = content.replace(/\/iptv\/\w+\//g, `/iptv/${key}/`);
                     
-                    // Получаем SHA существующего файла, если он есть
-                    const sha = await getFileSha(`public/${filename}`);
+                    const sha = await getFileSha(filename);
                     
                     const apiUrl = `https://api.github.com/repos/${REPO_CONFIG.owner}/${REPO_CONFIG.repo}/contents/${filename}`;
                     const uploadResponse = await fetch(apiUrl, {
@@ -606,7 +687,7 @@
                             message: `Добавлен плейлист: ${cleanPhone}`,
                             content: btoa(unescape(encodeURIComponent(content))),
                             branch: REPO_CONFIG.branch,
-                            sha: sha // Добавляем SHA, если файл существует
+                            sha: sha
                         })
                     });
                     
@@ -625,36 +706,44 @@
             });
         }
 
+        function showStatus(message, type) {
+            const statusEl = document.getElementById('status');
+            statusEl.innerHTML = message;
+            statusEl.className = type;
+            statusEl.style.display = 'block';
+        }
+        
+        function showEditStatus(message, type) {
+            const statusEl = document.getElementById('editStatus');
+            statusEl.innerHTML = message;
+            statusEl.className = type;
+            statusEl.style.display = 'block';
+        }
+
         // Обработчики событий
         document.addEventListener('DOMContentLoaded', () => {
-            renderClients();
+            initClients();
             
-            // Кнопка "Новый клиент"
             document.getElementById('newClientBtn').addEventListener('click', () => {
-                // Устанавливаем сегодняшнюю дату по умолчанию
                 const today = new Date().toISOString().split('T')[0];
                 document.getElementById('paymentDate').value = today;
                 openModal('newClientModal');
             });
             
-            // Кнопка "Список каналов"
             document.getElementById('channelListBtn').addEventListener('click', () => {
                 window.location.href = 'https://iptv-spisok.vercel.app/';
             });
             
-            // Поле поиска
             document.getElementById('searchInput').addEventListener('input', (e) => {
                 const searchText = e.target.value;
                 const filteredClients = filterClients(searchText);
                 renderClients(filteredClients);
             });
             
-            // Кнопка "Отмена" в модалке нового клиента
             document.getElementById('cancelBtn').addEventListener('click', () => {
                 closeModal('newClientModal');
             });
             
-            // Кнопка "Сохранить" в модалке нового клиента
             document.getElementById('saveBtn').addEventListener('click', async () => {
                 const name = document.getElementById('clientName').value.trim();
                 const phone = document.getElementById('phone').value.trim();
@@ -677,12 +766,6 @@
                     const blob = new Blob([result.content], { type: 'application/x-mpegurl' });
                     const tempUrl = URL.createObjectURL(blob);
                     
-                    showStatus(
-                        `Плейлист успешно создан!<br>
-                        <span class="download-link" onclick="forceDownload('${tempUrl}', '${filename}')">Скачать ${filename}</span>`,
-                        "success"
-                    );
-                    
                     // Добавляем клиента с дополнительными данными
                     clients.push({
                         name,
@@ -691,7 +774,16 @@
                         paymentDate,
                         months
                     });
-                    saveClients();
+                    
+                    // Сохраняем клиентов (локально и в GitHub)
+                    await saveClients();
+                    
+                    showStatus(
+                        `Плейлист успешно создан!<br>
+                        <span class="download-link" onclick="forceDownload('${tempUrl}', '${filename}')">Скачать ${filename}</span>`,
+                        "success"
+                    );
+                    
                     renderClients();
                     
                     // Очищаем форму
@@ -710,36 +802,35 @@
                 }
             });
             
-            // Кнопка "Редактировать" в модалке информации о клиенте
             document.getElementById('editBtn').addEventListener('click', () => {
                 if (currentClientId !== null) {
                     const client = clients[currentClientId];
                     
-                    // Заполняем форму редактирования данными клиента
                     document.getElementById('editClientName').value = client.name || '';
                     document.getElementById('editPhone').value = client.phone;
                     document.getElementById('editKey').value = client.key;
                     document.getElementById('editPaymentDate').value = client.paymentDate;
                     document.getElementById('editMonths').value = client.months;
                     
-                    // Открываем модальное окно редактирования
                     closeModal('clientInfoModal');
                     openModal('editClientModal');
                 }
             });
             
-            // Кнопка "Удалить" в модалке информации о клиенте
-            document.getElementById('deleteBtn').addEventListener('click', () => {
+            document.getElementById('deleteBtn').addEventListener('click', async () => {
                 if (currentClientId !== null) {
                     clients.splice(currentClientId, 1);
-                    saveClients();
-                    renderClients();
-                    closeModal('clientInfoModal');
-                    currentClientId = null;
+                    try {
+                        await saveClients();
+                        renderClients();
+                        closeModal('clientInfoModal');
+                        currentClientId = null;
+                    } catch (error) {
+                        showStatus(`Ошибка при удалении: ${error.message}`, "error");
+                    }
                 }
             });
             
-            // Кнопка "Файл" в модалке информации о клиенте
             document.getElementById('fileBtn').addEventListener('click', () => {
                 if (currentClientId !== null) {
                     const client = clients[currentClientId];
@@ -748,13 +839,11 @@
                 }
             });
             
-            // Кнопка "Отмена" в модалке редактирования
             document.getElementById('editCancelBtn').addEventListener('click', () => {
                 closeModal('editClientModal');
             });
             
-            // Кнопка "Сохранить" в модалке редактирования
-            document.getElementById('editSaveBtn').addEventListener('click', () => {
+            document.getElementById('editSaveBtn').addEventListener('click', async () => {
                 if (currentClientId !== null) {
                     const name = document.getElementById('editClientName').value.trim();
                     const phone = document.getElementById('editPhone').value.trim();
@@ -776,29 +865,19 @@
                         months
                     };
                     
-                    saveClients();
-                    renderClients();
-                    closeModal('editClientModal');
-                    
-                    // Показываем обновленную информацию о клиенте
-                    showClientInfo(clients[currentClientId]);
+                    try {
+                        await saveClients();
+                        renderClients();
+                        closeModal('editClientModal');
+                        
+                        // Показываем обновленную информацию о клиенте
+                        showClientInfo(clients[currentClientId]);
+                    } catch (error) {
+                        showEditStatus(`Ошибка сохранения: ${error.message}`, "error");
+                    }
                 }
             });
         });
-
-        function showStatus(message, type) {
-            const statusEl = document.getElementById('status');
-            statusEl.innerHTML = message;
-            statusEl.className = type;
-            statusEl.style.display = 'block';
-        }
-        
-        function showEditStatus(message, type) {
-            const statusEl = document.getElementById('editStatus');
-            statusEl.innerHTML = message;
-            statusEl.className = type;
-            statusEl.style.display = 'block';
-        }
 
         // Глобальные функции
         window.forceDownload = forceDownload;
