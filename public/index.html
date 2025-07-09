@@ -432,7 +432,7 @@
                 
                 if (response.ok) {
                     const data = await response.json();
-                    const content = atob(data.content);
+                    const content = decodeURIComponent(escape(atob(data.content)));
                     return JSON.parse(content) || [];
                 } else if (response.status === 404) {
                     // Файл не существует, создадим его при первом сохранении
