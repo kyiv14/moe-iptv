@@ -103,6 +103,9 @@
             cursor: pointer;
             position: relative;
         }
+        .client-card.expired {
+            border: 2px solid var(--system-red);
+        }
         .client-card h3 {
             margin: 0 0 5px 0;
             font-size: 22px;
@@ -661,10 +664,13 @@
             clientsData.forEach((client, index) => {
                 const daysLeft = calculateDaysLeft(client.paymentDate, client.months);
                 const daysLeftClass = daysLeft >= 0 ? 'positive' : 'negative';
-                const daysLeftText = daysLeft >= 0 ? `${daysLeft} дн.` : `Просрочено ${Math.abs(daysLeft)} дн.`;
+                const daysLeftText = daysLeft >= 0 ? `${daysLeft} дн.` : `${Math.abs(daysLeft)} дн.`;
                 
                 const card = document.createElement('div');
                 card.className = 'client-card';
+                if (daysLeft < 0) {
+                    card.classList.add('expired');
+                }
                 card.innerHTML = `
                     <h3>${client.name || 'Без имени'}</h3>
                     <p>${client.phone}</p>
@@ -809,6 +815,12 @@
                 }
             });
             
+            document.getElementById('loginInput').addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') {
+                    checkAuth();
+                }
+            });
+            
             document.getElementById('newClientBtn').addEventListener('click', () => {
                 const today = new Date().toISOString().split('T')[0];
                 document.getElementById('paymentDate').value = today;
@@ -878,7 +890,7 @@
                     document.getElementById('paymentDate').value = new Date().toISOString().split('T')[0];
                     document.getElementById('months').value = '1';
                     
-                    // Закрываем модальное окно
+                    // Закрываем модальное окне
                     closeModal('newClientModal');
                     
                 } catch (error) {
