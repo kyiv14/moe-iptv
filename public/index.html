@@ -2,7 +2,7 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>IPTV Manager</title>
     <link rel="icon" href="https://moe-iptv.vercel.app/iptv_icon.ico" type="image/x-icon">
     <style>
@@ -14,18 +14,37 @@
             --system-red: #FF3B30;
             --system-orange: #FF9500;
         }
+        
+        /* Исправления для одинакового отображения */
+        html {
+            -webkit-text-size-adjust: 100%;
+            text-size-adjust: 100%;
+            touch-action: manipulation;
+            width: 100%;
+            height: 100%;
+        }
+        
         * {
             box-sizing: border-box;
             margin: 0;
             padding: 0;
             font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Helvetica Neue', sans-serif;
         }
+        
         body {
+            -webkit-text-size-adjust: 100%;
+            text-size-adjust: 100%;
+            touch-action: manipulation;
+            max-width: 100vw;
+            overflow-x: hidden;
             background-color: var(--system-gray-light);
             color: #1C1C1E;
             min-height: 100vh;
             padding: 20px;
+            margin: 0;
+            width: 100%;
         }
+        
         .container {
             width: 100%;
             max-width: 500px;
@@ -34,22 +53,26 @@
             box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
             overflow: hidden;
             padding: 20px;
-            margin: 20px auto 0;
+            margin: 20px auto;
         }
+        
         .header {
             margin-bottom: 20px;
         }
+        
         .header h1 {
             font-size: 22px;
             font-weight: 600;
             text-align: center;
         }
+        
         .buttons {
             display: flex;
             flex-direction: column;
             gap: 12px;
             margin-bottom: 20px;
         }
+        
         button {
             width: 100%;
             padding: 12px;
@@ -62,25 +85,30 @@
             cursor: pointer;
             transition: all 0.2s;
         }
+        
         button:active {
             opacity: 0.8;
             transform: scale(0.98);
         }
+        
         button.secondary {
             background: white;
             color: var(--system-blue);
             border: 1px solid var(--system-blue);
         }
+        
         button.danger {
             background: white;
             color: var(--system-red);
             border: 1px solid var(--system-red);
         }
+        
         button.warning {
             background: white;
             color: var(--system-orange);
             border: 1px solid var(--system-orange);
         }
+        
         .search-input {
             width: 100%;
             padding: 12px;
@@ -89,11 +117,13 @@
             font-size: 17px;
             margin-bottom: 12px;
         }
+        
         .search-input:focus {
             outline: none;
             border-color: var(--system-blue);
             box-shadow: 0 0 0 4px rgba(0, 122, 255, 0.1);
         }
+        
         .client-card {
             background: white;
             border-radius: 8px;
@@ -103,19 +133,23 @@
             cursor: pointer;
             position: relative;
         }
+        
         .client-card.expired {
             border: 2px solid var(--system-red);
         }
+        
         .client-card h3 {
             margin: 0 0 5px 0;
             font-size: 22px;
             color: var(--system-blue);
         }
+        
         .client-card p {
             margin: 0;
             font-size: 22px;
             color: var(--system-gray);
         }
+        
         .days-left {
             position: absolute;
             top: 16px;
@@ -123,12 +157,15 @@
             font-size: 22px;
             font-weight: 500;
         }
+        
         .days-left.positive {
             color: var(--system-green);
         }
+        
         .days-left.negative {
             color: var(--system-red);
         }
+        
         .modal {
             display: none;
             position: fixed;
@@ -141,6 +178,7 @@
             justify-content: center;
             align-items: center;
         }
+        
         .modal-content {
             background: white;
             width: 90%;
@@ -150,29 +188,35 @@
             animation: modalOpen 0.3s ease-out;
             font-size: 20px;
         }
+        
         @keyframes modalOpen {
             from { transform: scale(0.9); opacity: 0; }
             to { transform: scale(1); opacity: 1; }
         }
+        
         .modal-header {
             display: flex;
             justify-content: space-between;
             align-items: center;
             margin-bottom: 20px;
         }
+        
         .modal-header h2 {
             font-size: 22px;
             margin: 0;
             font-weight: bold;
             text-transform: uppercase;
         }
+        
         .close-btn {
             font-size: 24px;
             cursor: pointer;
         }
+        
         .form-group {
             margin-bottom: 20px;
         }
+        
         label {
             display: block;
             font-size: 17px;
@@ -180,6 +224,7 @@
             color: var(--system-gray);
             margin-bottom: 8px;
         }
+        
         input, select {
             width: 100%;
             padding: 12px;
@@ -189,52 +234,63 @@
             background: white;
             box-shadow: 0 1px 4px rgba(0, 0, 0, 0.05);
         }
+        
         input:focus, select:focus {
             outline: none;
             border-color: var(--system-blue);
             box-shadow: 0 0 0 4px rgba(0, 122, 255, 0.1);
         }
+        
         .modal-actions {
             display: flex;
             gap: 12px;
             margin-top: 20px;
         }
+        
         .modal-actions button {
             flex: 1;
         }
+        
         #status {
             padding: 16px;
             font-size: 15px;
             display: none;
             margin-top: 20px;
         }
+        
         .success {
             color: var(--system-green);
         }
+        
         .error {
             color: var(--system-red);
         }
+        
         .client-info p {
             margin-bottom: 12px;
             display: flex;
             align-items: center;
             gap: 10px;
         }
+        
         .client-info strong {
             font-weight: 600;
         }
+        
         .link-container {
             display: flex;
             align-items: center;
             margin-bottom: 10px;
             gap: 10px;
         }
+        
         .link {
             color: #000;
             text-decoration: none;
             flex-grow: 1;
             word-break: break-all;
         }
+        
         .copy-btn {
             background: transparent;
             color: var(--system-blue);
@@ -250,11 +306,13 @@
             width: 24px;
             height: 24px;
         }
+        
         .icon {
             width: 24px;
             height: 24px;
             object-fit: contain;
         }
+        
         .auth-modal {
             display: flex;
             position: fixed;
@@ -267,6 +325,7 @@
             justify-content: center;
             align-items: center;
         }
+        
         .auth-container {
             background: white;
             width: 90%;
@@ -275,6 +334,7 @@
             padding: 20px;
             animation: modalOpen 0.3s ease-out;
         }
+        
         .auth-input {
             width: 100%;
             padding: 12px;
@@ -283,21 +343,63 @@
             font-size: 17px;
             margin-bottom: 12px;
         }
+        
         .auth-error {
             color: var(--system-red);
             margin-bottom: 12px;
             text-align: center;
             display: none;
         }
+        
         .clients-counter {
             text-align: center;
             margin-bottom: 15px;
             font-weight: 500;
             font-size: 20px;
         }
+        
         .clients-counter span {
             font-size: 22px;
             color: var(--system-blue);
+        }
+        
+        /* Медиа-запросы для одинакового отображения */
+        @media (max-width: 768px) {
+            body {
+                padding: 15px;
+            }
+            
+            .container {
+                margin: 10px auto;
+                padding: 15px;
+            }
+            
+            .modal-content {
+                width: 95%;
+                padding: 15px;
+            }
+        }
+        
+        @media (min-width: 1200px) {
+            body {
+                display: flex;
+                justify-content: center;
+                align-items: flex-start;
+                padding-top: 40px;
+            }
+        }
+        
+        /* Fallback для иконок */
+        .icon-fallback {
+            width: 24px;
+            height: 24px;
+            background: var(--system-gray-light);
+            border-radius: 4px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+            color: var(--system-gray);
         }
     </style>
 </head>
@@ -474,6 +576,28 @@
         let clients = JSON.parse(localStorage.getItem('iptv_clients')) || [];
         let currentClientId = null;
 
+        // Принудительная установка viewport если отсутствует
+        function ensureViewport() {
+            if (!document.querySelector('meta[name="viewport"]')) {
+                const meta = document.createElement('meta');
+                meta.name = 'viewport';
+                meta.content = 'width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no';
+                document.head.appendChild(meta);
+                console.log('Viewport meta tag added programmatically');
+            }
+        }
+
+        // Обработка ошибок загрузки иконок
+        function handleImageErrors() {
+            document.querySelectorAll('img').forEach(img => {
+                img.onerror = function() {
+                    console.log('Image failed to load:', this.src);
+                    const altText = this.alt || 'icon';
+                    this.outerHTML = `<span class="icon-fallback" title="${altText}">${altText.charAt(0)}</span>`;
+                };
+            });
+        }
+
         function getGitHubToken() {
             return TOKEN_PARTS.join('');
         }
@@ -572,6 +696,7 @@
             }
             renderClients();
             updateClientsCounter();
+            handleImageErrors(); // Обработка ошибок иконок после рендера
         }
 
         // Сохранение клиентов (локально и в GitHub)
@@ -711,19 +836,20 @@
                     <div class="link-container">
                         <a href="${link}" class="link" target="_blank">${link}</a>
                         <button class="copy-btn" onclick="copyToClipboard('${link}', event)" title="Копировать">
-                            <img src="https://moe-iptv.vercel.app/copy.png" alt="Копировать" class="icon">
+                            <img src="https://moe-iptv.vercel.app/copy.png" alt="Копировать" class="icon" onerror="this.style.display='none'; this.nextElementSibling.style.display='inline'">
+                            <span class="icon-fallback" style="display:none">C</span>
                         </button>
                     </div>
                 `;
             });
             
             document.getElementById('clientInfoContent').innerHTML = `
-                <p><img src="https://moe-iptv.vercel.app/user.png" alt="Имя" class="icon"><strong>${client.name || 'Не указано'}</strong></p>
-                <p><img src="https://moe-iptv.vercel.app/call.png" alt="Телефон" class="icon">${client.phone}</p>
-                <p><img src="https://moe-iptv.vercel.app/key.png" alt="Ключ" class="icon">${client.key}</p>
-                <p><img src="https://moe-iptv.vercel.app/date.png" alt="Дата" class="icon">${formatDate(client.paymentDate)}</p>
-                <p><img src="https://moe-iptv.vercel.app/mail.png" alt="Срок" class="icon"><strong>${daysLeftText}</strong></p>
-                <p><img src="https://moe-iptv.vercel.app/link.png" alt="Ссылки" class="icon"><strong>Ссылки:</strong></p>
+                <p><img src="https://moe-iptv.vercel.app/user.png" alt="Имя" class="icon" onerror="this.style.display='none'; this.nextElementSibling.style.display='inline'"><span class="icon-fallback" style="display:none">U</span><strong>${client.name || 'Не указано'}</strong></p>
+                <p><img src="https://moe-iptv.vercel.app/call.png" alt="Телефон" class="icon" onerror="this.style.display='none'; this.nextElementSibling.style.display='inline'"><span class="icon-fallback" style="display:none">T</span>${client.phone}</p>
+                <p><img src="https://moe-iptv.vercel.app/key.png" alt="Ключ" class="icon" onerror="this.style.display='none'; this.nextElementSibling.style.display='inline'"><span class="icon-fallback" style="display:none">K</span>${client.key}</p>
+                <p><img src="https://moe-iptv.vercel.app/date.png" alt="Дата" class="icon" onerror="this.style.display='none'; this.nextElementSibling.style.display='inline'"><span class="icon-fallback" style="display:none">D</span>${formatDate(client.paymentDate)}</p>
+                <p><img src="https://moe-iptv.vercel.app/mail.png" alt="Срок" class="icon" onerror="this.style.display='none'; this.nextElementSibling.style.display='inline'"><span class="icon-fallback" style="display:none">S</span><strong>${daysLeftText}</strong></p>
+                <p><img src="https://moe-iptv.vercel.app/link.png" alt="Ссылки" class="icon" onerror="this.style.display='none'; this.nextElementSibling.style.display='inline'"><span class="icon-fallback" style="display:none">L</span><strong>Ссылки:</strong></p>
                 ${linksHTML}
             `;
             openModal('clientInfoModal');
@@ -792,6 +918,9 @@
 
         // Обработчики событий
         document.addEventListener('DOMContentLoaded', () => {
+            // Гарантируем наличие viewport
+            ensureViewport();
+            
             // Проверка авторизации
             function checkAuth() {
                 const login = document.getElementById('loginInput').value.toLowerCase();
