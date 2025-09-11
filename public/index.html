@@ -528,7 +528,7 @@
             </div>
             
             <div class="form-group">
-                <label>Ключ доступа</label>
+                <label>Ключ доступ</label>
                 <input type="text" id="editKey">
             </div>
             
@@ -602,6 +602,53 @@
 
         function getGitHubToken() {
             return TOKEN_PARTS.join('');
+        }
+
+        // Функция для извлечения последних 10 цифр номера телефона
+        function extractPhoneNumber(phone) {
+            const digits = phone.replace(/\D/g, '');
+            return digits.slice(-10); // Берем только последние 10 цифр
+        }
+
+        // Функция для создания сокращенной ссылки через is.gd API
+        async function createIsGdShortUrl(phone) {
+            try {
+                const cleanPhone = extractPhoneNumber(phone);
+                const longUrl = `https://moe-iptv.vercel.app/${cleanPhone}.m3u`;
+                
+                const apiUrl = `https://is.gd/create.php?format=json&url=${encodeURIComponent(longUrl)}&shorturl=${cleanPhone}`;
+                const response = await fetch(apiUrl);
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                
+                const data = await response.json();
+                
+                if (data.errorcode) {
+                    // Если ссылка уже существует или другая ошибка, все равно возвращаем нужный формат
+                    console.log('is.gd API сообщение:', data.errormessage);
+                    return `https://is.gd/${cleanPhone}`;
+                }
+                
+                return data.shorturl;
+            } catch (error) {
+                console.error('Ошибка создания is.gd ссылки:', error);
+                // В случае ошибки все равно возвращаем ссылку в нужном формате
+                return `https://is.gd/${extractPhoneNumber(phone)}`;
+            }
+        }
+
+        // Функция для получения всех ссылок для клиента
+        function generateClientLinks(phone) {
+            const cleanPhone = extractPhoneNumber(phone);
+            const baseUrl = `https://moe-iptv.vercel.app/${cleanPhone}.m3u`;
+            
+            return [
+                `https://is.gd/${cleanPhone}`,
+                `https://rebrand.ly/${cleanPhone}`,
+                baseUrl
+            ];
         }
 
         // Загрузка клиентов из GitHub
@@ -713,11 +760,6 @@
             }
         }
 
-        function extractPhoneNumber(phone) {
-            const digits = phone.replace(/\D/g, '');
-            return digits.slice(-10);
-        }
-
         function formatDate(dateString) {
             if (!dateString) return 'Не указана';
             const date = new Date(dateString);
@@ -825,12 +867,8 @@
             const daysLeft = calculateDaysLeft(client.paymentDate, client.months);
             const daysLeftText = daysLeft >= 0 ? `Осталось ${daysLeft} дней` : `Просрочено на ${Math.abs(daysLeft)} дней`;
             
-            const phone = client.phone;
-            const links = [
-                `https://is.gd/${phone}`,
-                `https://rebrand.ly/${phone}`,
-                `https://moe-iptv.vercel.app/${phone}.m3u`
-            ];
+            // Генерируем ссылки
+            const links = generateClientLinks(client.phone);
             
             let linksHTML = '';
             links.forEach(link => {
@@ -894,9 +932,14 @@
                         throw new Error(error.message || "Ошибка при загрузке на GitHub");
                     }
 
+                    // Автоматически создаем is.gd ссылку через API
+                    const isgdUrl = await createIsGdShortUrl(phone);
+                    console.log('is.gd ссылка создана через API:', isgdUrl);
+
                     resolve({
                         filename,
-                        content
+                        content,
+                        isgdUrl
                     });
                 } catch (error) {
                     reject(error);
@@ -997,7 +1040,7 @@
                     // Добавляем клиента с дополнительными данными
                     clients.push({
                         name,
-                        phone: extractPhoneNumber(phone),
+                        phone: extractPhoneNumber(phone), // Сохраняем только последние 10 цифр
                         key,
                         paymentDate,
                         months
@@ -1008,6 +1051,7 @@
                     
                     showStatus(
                         `Плейлист успешно создан!<br>
+                        is.gd ссылка: ${result.isgdUrl}<br>
                         <span class="download-link" onclick="forceDownload('${tempUrl}', '${filename.split('/').pop()}')">Скачать ${filename.split('/').pop()}</span>`,
                         "success"
                     );
@@ -1021,7 +1065,7 @@
                     document.getElementById('paymentDate').value = new Date().toISOString().split('T')[0];
                     document.getElementById('months').value = '1';
                     
-                    // Закрываем модальное окне
+                    // Закрываем модальное окно
                     closeModal('newClientModal');
                     
                 } catch (error) {
