@@ -8,6 +8,7 @@
     <style>
         :root {
             --system-blue: #007AFF;
+            --system-blue-light: #5AC8FA;
             --system-gray: #8E8E93;
             --system-gray-light: #F2F2F7;
             --system-green: #34C759;
@@ -80,8 +81,8 @@
             color: white;
             border: none;
             border-radius: 8px;
-            font-size: 17px;
-            font-weight: 500;
+            font-size: 22px;
+            font-weight: bold;
             cursor: pointer;
             transition: all 0.2s;
         }
@@ -92,9 +93,9 @@
         }
         
         button.secondary {
-            background: white;
-            color: var(--system-blue);
-            border: 1px solid var(--system-blue);
+            background: var(--system-blue-light);
+            color: white;
+            border: none;
         }
         
         button.danger {
@@ -424,8 +425,8 @@
         <div class="buttons">
             <button id="newClientBtn">Новый клиент</button>
             <button id="channelListBtn" class="secondary">Список каналов</button>
-            <input type="text" id="searchInput" class="search-input" placeholder="Поиск по номеру телефона...">
             <button id="channelEditorBtn" class="secondary" onclick="window.open('https://read24.vercel.app', '_blank')">Редактор каналов</button>
+            <input type="text" id="searchInput" class="search-input" placeholder="Поиск по номеру телефона...">
         </div>
         
         <div id="clientsList">
