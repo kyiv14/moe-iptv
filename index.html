@@ -736,6 +736,41 @@
             }
         }
 
+        // Удаление файла плейлиста с GitHub
+        async function deletePlaylistFile(client) {
+            try {
+                const cleanPhone = extractPhoneNumber(client.phone);
+                const filename = `public/${cleanPhone}.m3u`;
+                
+                // Получаем SHA файла для удаления
+                const sha = await getFileSha(filename);
+                
+                if (sha) {
+                    const apiUrl = `https://api.github.com/repos/${REPO_CONFIG.owner}/${REPO_CONFIG.repo}/contents/${filename}`;
+                    const response = await fetch(apiUrl, {
+                        method: 'DELETE',
+                        headers: {
+                            'Authorization': `Bearer ${getGitHubToken()}`,
+                            'Content-Type': 'application/json',
+                            'Accept': 'application/vnd.github+json'
+                        },
+                        body: JSON.stringify({
+                            message: `Удален плейлист для клиента ${cleanPhone}`,
+                            sha: sha,
+                            branch: REPO_CONFIG.branch
+                        })
+                    });
+                    
+                    if (!response.ok) {
+                        console.warn('Не удалось удалить файл плейлиста:', await response.text());
+                    }
+                }
+            } catch (error) {
+                console.warn('Ошибка при удалении файла плейлиста:', error);
+                // Продолжаем удаление клиента даже если файл не найден
+            }
+        }
+
         // Инициализация клиентов (загрузка из GitHub)
         async function initClients() {
             const githubClients = await loadClientsFromGitHub();
@@ -971,6 +1006,7 @@
                 const login = document.getElementById('loginInput').value.toLowerCase();
                 const password = document.getElementById('passwordInput').value;
                 
+                // Исправленные учетные данные
                 if (login === 'zpv' && password === '1975') {
                     document.getElementById('authModal').style.display = 'none';
                     document.getElementById('appContainer').style.display = 'block';
@@ -1091,9 +1127,22 @@
             
             document.getElementById('deleteBtn').addEventListener('click', async () => {
                 if (currentClientId !== null) {
-                    clients.splice(currentClientId, 1);
+                    const client = clients[currentClientId];
+                    
+                    if (!confirm(`Вы уверены, что хотите удалить клиента ${client.name || client.phone}?`)) {
+                        return;
+                    }
+                    
                     try {
+                        // Удаляем файл плейлиста
+                        await deletePlaylistFile(client);
+                        
+                        // Удаляем клиента из списка
+                        clients.splice(currentClientId, 1);
+                        
+                        // Сохраняем обновленный список
                         await saveClients();
+                        
                         renderClients();
                         closeModal('clientInfoModal');
                         currentClientId = null;
