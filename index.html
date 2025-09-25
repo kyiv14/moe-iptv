@@ -251,11 +251,21 @@
         
         .modal-actions {
             display: flex;
+            flex-direction: column;
             gap: 12px;
             margin-top: 20px;
         }
         
-        .modal-actions button {
+        .modal-actions-row {
+            display: flex;
+            gap: 12px;
+        }
+
+        .modal-actions-row button {
+            flex: 1;
+        }
+
+        #newClientModal .modal-actions button {
             flex: 1;
         }
         
@@ -506,8 +516,10 @@
                 </div>
             
             <div class="modal-actions">
-                <button id="editBtn" class="warning">Редактировать</button>
-                <button id="deleteBtn" class="danger">Удалить</button>
+                <div class="modal-actions-row">
+                    <button id="editBtn" class="warning">Редактировать</button>
+                    <button id="deleteBtn" class="danger">Удалить</button>
+                </div>
                 <button id="fileBtn">Файл</button>
             </div>
         </div>
@@ -559,8 +571,10 @@
             </div>
             
             <div class="modal-actions">
-                <button id="editCancelBtn" class="secondary">Отмена</button>
-                <button id="editSaveBtn">Сохранить</button>
+                <div class="modal-actions-row">
+                    <button id="editCancelBtn" class="secondary">Отмена</button>
+                    <button id="editSaveBtn">Сохранить</button>
+                </div>
             </div>
             
             <div id="editStatus"></div>
