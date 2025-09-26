@@ -140,6 +140,13 @@
             border: 1px solid #D1D1D6;
             cursor: pointer;
             position: relative;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+            transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+        }
+        
+        .client-card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 6px 15px rgba(0, 0, 0, 0.12);
         }
         
         .client-card.expired {
@@ -185,6 +192,8 @@
             z-index: 100;
             justify-content: center;
             align-items: center;
+            padding: 20px 0;
+            overflow-y: auto;
         }
         
         .modal-content {
@@ -225,6 +234,10 @@
             margin-bottom: 20px;
         }
         
+        #newClientModal .form-group {
+            margin-bottom: 15px;
+        }
+        
         label {
             display: block;
             font-size: 17px;
@@ -256,16 +269,16 @@
             margin-top: 20px;
         }
         
+        #newClientModal .modal-actions {
+            margin-top: 15px;
+        }
+        
         .modal-actions-row {
             display: flex;
             gap: 12px;
         }
 
         .modal-actions-row button {
-            flex: 1;
-        }
-
-        #newClientModal .modal-actions button {
             flex: 1;
         }
         
@@ -440,12 +453,12 @@
         <div class="clients-counter">Клиентов: <span id="clientsCount">0</span></div>
         
         <div class="buttons">
-            <button id="newClientBtn">Новый клиент</button>
-            <button id="channelListBtn" class="secondary">Список каналов</button>
-            <button id="channelEditorBtn" class="secondary" onclick="window.open('https://read24.vercel.app', '_blank')">Редактор каналов</button>
-            <button id="shortenLinkBtn" class="secondary" onclick="window.open('https://short24.vercel.app/', '_blank')">Сократить ссылку</button>
+            <button id="newClientBtn">Новый<br>клиент</button>
+            <button id="channelListBtn" class="secondary">Список<br>каналов</button>
+            <button id="channelEditorBtn" class="secondary" onclick="window.open('https://read24.vercel.app', '_blank')">Редактор<br>каналов</button>
+            <button id="shortenLinkBtn" class="secondary" onclick="window.open('https://short24.vercel.app/', '_blank')">Сократить<br>ссылку</button>
         </div>
-        <input type="text" id="searchInput" class="search-input" placeholder="Поиск по номеру телефона...">
+        <input type="text" id="searchInput" class="search-input" placeholder="Поиск по имени или номеру...">
         
         <div id="clientsList">
             </div>
@@ -497,8 +510,10 @@
             </div>
             
             <div class="modal-actions">
-                <button id="cancelBtn" class="secondary">Отмена</button>
-                <button id="saveBtn">Сохранить</button>
+                <div class="modal-actions-row">
+                    <button id="cancelBtn" class="secondary">Отмена</button>
+                    <button id="saveBtn">Сохранить</button>
+                </div>
             </div>
             
             <div id="status"></div>
@@ -861,14 +876,21 @@
         }
 
         function filterClients(searchText) {
-            if (!searchText) return clients;
-            
-            const searchDigits = searchText.replace(/\D/g, '');
-            if (searchDigits.length === 0) return clients;
-            
+            if (!searchText) {
+                return clients;
+            }
+
+            const lowerCaseSearchText = searchText.toLowerCase().trim();
+            const searchDigits = lowerCaseSearchText.replace(/\D/g, '');
+
             return clients.filter(client => {
+                const clientName = (client.name || '').toLowerCase();
+                const nameMatch = clientName.includes(lowerCaseSearchText);
+
                 const clientPhoneDigits = client.phone.replace(/\D/g, '');
-                return clientPhoneDigits.includes(searchDigits);
+                const phoneMatch = searchDigits.length > 0 && clientPhoneDigits.includes(searchDigits);
+
+                return nameMatch || phoneMatch;
             });
         }
 
