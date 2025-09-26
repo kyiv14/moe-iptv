@@ -432,6 +432,28 @@
             font-size: 12px;
             color: var(--system-gray);
         }
+
+        /* Стиль для поля ввода ключа в модалке информации */
+        #clientInfoContent input {
+            padding: 8px;
+            font-size: 17px;
+            margin-left: 10px;
+        }
+
+        #clientInfoContent .key-edit-group {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 12px;
+        }
+
+        #clientInfoContent .key-edit-group label {
+            margin-bottom: 0;
+        }
+        
+        #clientInfoContent .key-edit-group input {
+            flex-grow: 1;
+        }
     </style>
 </head>
 <body>
@@ -535,8 +557,11 @@
                     <button id="editBtn" class="warning">Редактировать</button>
                     <button id="deleteBtn" class="danger">Удалить</button>
                 </div>
-                <button id="fileBtn">Файл</button>
+                <button id="updateKeyBtn" class="warning">Обновить ключ</button> <button id="fileBtn">Файл</button>
             </div>
+
+            <div id="clientInfoStatus" style="padding: 10px; font-size: 15px; display: none; margin-top: 10px;"></div>
+
         </div>
     </div>
 
@@ -869,6 +894,10 @@
 
         function openModal(modalId) {
             document.getElementById(modalId).style.display = 'flex';
+            // Сбрасываем статус при открытии модалки информации о клиенте
+            if (modalId === 'clientInfoModal') {
+                showClientInfoStatus('', '');
+            }
         }
 
         function closeModal(modalId) {
@@ -960,7 +989,14 @@
             document.getElementById('clientInfoContent').innerHTML = `
                 <p><img src="https://moe-iptv.vercel.app/user.png" alt="Имя" class="icon" onerror="this.style.display='none'; this.nextElementSibling.style.display='inline'"><span class="icon-fallback" style="display:none">U</span><strong>${client.name || 'Не указано'}</strong></p>
                 <p><img src="https://moe-iptv.vercel.app/call.png" alt="Телефон" class="icon" onerror="this.style.display='none'; this.nextElementSibling.style.display='inline'"><span class="icon-fallback" style="display:none">T</span>${client.phone}</p>
-                <p><img src="https://moe-iptv.vercel.app/key.png" alt="Ключ" class="icon" onerror="this.style.display='none'; this.nextElementSibling.style.display='inline'"><span class="icon-fallback" style="display:none">K</span>${client.key}</p>
+                <div class="key-edit-group">
+                    <p style="margin: 0; display: flex; align-items: center; gap: 10px;">
+                        <img src="https://moe-iptv.vercel.app/key.png" alt="Ключ" class="icon" onerror="this.style.display='none'; this.nextElementSibling.style.display='inline'">
+                        <span class="icon-fallback" style="display:none">K</span>
+                        <strong style="flex-shrink: 0;">Ключ:</strong>
+                    </p>
+                    <input type="text" id="newKeyInput" value="${client.key}" placeholder="Новый ключ доступа" style="font-size: 15px; padding: 12px; border: 1px solid #D1D1D6; border-radius: 8px;">
+                </div>
                 <p><img src="https://moe-iptv.vercel.app/date.png" alt="Дата" class="icon" onerror="this.style.display='none'; this.nextElementSibling.style.display='inline'"><span class="icon-fallback" style="display:none">D</span>${formatDate(client.paymentDate)}</p>
                 <p><img src="https://moe-iptv.vercel.app/mail.png" alt="Срок" class="icon" onerror="this.style.display='none'; this.nextElementSibling.style.display='inline'"><span class="icon-fallback" style="display:none">S</span><strong>${daysLeftText}</strong></p>
                 <p><img src="https://moe-iptv.vercel.app/link.png" alt="Ссылки" class="icon" onerror="this.style.display='none'; this.nextElementSibling.style.display='inline'"><span class="icon-fallback" style="display:none">L</span><strong>Ссылки:</strong></p>
@@ -983,7 +1019,7 @@
                     let content = await response.text();
                     content = content.replace(/\/iptv\/\w+\//g, `/iptv/${key}/`);
                     
-                    const sha = await getFileSha(filename);
+                    const sha = await getFileSha(filename); // Получаем SHA, чтобы заменить файл
                     
                     const apiUrl = `https://api.github.com/repos/${REPO_CONFIG.owner}/${REPO_CONFIG.repo}/contents/${filename}`;
                     const uploadResponse = await fetch(apiUrl, {
@@ -994,10 +1030,10 @@
                             'Accept': 'application/vnd.github+json'
                         },
                         body: JSON.stringify({
-                            message: `Добавлен плейлист: ${cleanPhone}`,
+                            message: `Обновлен плейлист для: ${cleanPhone}`, // Изменено сообщение
                             content: btoa(unescape(encodeURIComponent(content))),
                             branch: REPO_CONFIG.branch,
-                            sha: sha
+                            sha: sha // Передаем SHA для обновления
                         })
                     });
                     
@@ -1008,7 +1044,7 @@
 
                     // Автоматически создаем is.gd ссылку через API
                     const isgdUrl = await createIsGdShortUrl(phone);
-                    console.log('is.gd ссылка создана через API:', isgdUrl);
+                    console.log('is.gd ссылка создана/обновлена через API:', isgdUrl);
 
                     resolve({
                         filename,
@@ -1033,6 +1069,13 @@
             statusEl.innerHTML = message;
             statusEl.className = type;
             statusEl.style.display = 'block';
+        }
+
+        function showClientInfoStatus(message, type) {
+            const statusEl = document.getElementById('clientInfoStatus');
+            statusEl.innerHTML = message;
+            statusEl.className = type;
+            statusEl.style.display = message ? 'block' : 'none'; // Скрываем, если нет сообщения
         }
 
         // Обработчики событий
@@ -1163,6 +1206,50 @@
                     openModal('editClientModal');
                 }
             });
+
+            // НОВЫЙ ОБРАБОТЧИК ДЛЯ ОБНОВЛЕНИЯ КЛЮЧА
+            document.getElementById('updateKeyBtn').addEventListener('click', async () => {
+                if (currentClientId !== null) {
+                    const client = clients[currentClientId];
+                    const newKey = document.getElementById('newKeyInput').value.trim();
+                    
+                    if (!newKey) {
+                        showClientInfoStatus("Ключ доступа не может быть пустым.", "error");
+                        return;
+                    }
+
+                    if (newKey === client.key) {
+                        showClientInfoStatus("Новый ключ совпадает с текущим.", "warning");
+                        return;
+                    }
+                    
+                    showClientInfoStatus("Обновление ключа и файла плейлиста...", "warning");
+                    
+                    try {
+                        // 1. Создаем/обновляем плейлист с новым ключом
+                        await createPlaylist(client.phone, newKey);
+                        
+                        // 2. Обновляем ключ в локальном объекте клиента
+                        client.key = newKey;
+                        
+                        // 3. Сохраняем обновленный список клиентов на GitHub
+                        await saveClients();
+
+                        showClientInfoStatus("Ключ и плейлист успешно обновлены! ✅", "success");
+                        
+                        // Обновляем отображение информации о клиенте в модалке
+                        setTimeout(() => showClientInfo(client), 1000); 
+                        
+                        // Обновляем список клиентов на главном экране
+                        renderClients();
+
+                    } catch (error) {
+                        showClientInfoStatus(`Ошибка при обновлении ключа: ${error.message}`, "error");
+                        console.error(error);
+                    }
+                }
+            });
+            // КОНЕЦ НОВОГО ОБРАБОТЧИКА
             
             document.getElementById('deleteBtn').addEventListener('click', async () => {
                 if (currentClientId !== null) {
@@ -1205,11 +1292,15 @@
             
             document.getElementById('editSaveBtn').addEventListener('click', async () => {
                 if (currentClientId !== null) {
+                    const client = clients[currentClientId];
                     const name = document.getElementById('editClientName').value.trim();
                     const phone = document.getElementById('editPhone').value.trim();
                     const key = document.getElementById('editKey').value.trim();
                     const paymentDate = document.getElementById('editPaymentDate').value;
                     const months = document.getElementById('editMonths').value;
+
+                    // Проверяем, изменился ли ключ, чтобы обновить плейлист
+                    const keyChanged = client.key !== key;
                     
                     if (!phone || !key) {
                         showEditStatus("Заполните номер телефона и ключ", "error");
@@ -1226,7 +1317,14 @@
                     };
                     
                     try {
+                        // Если ключ изменился, обновляем плейлист
+                        if (keyChanged) {
+                            showEditStatus("Обновление ключа и файла плейлиста...", "warning");
+                            await createPlaylist(clients[currentClientId].phone, key);
+                        }
+
                         await saveClients();
+                        
                         renderClients();
                         closeModal('editClientModal');
                         
@@ -1242,6 +1340,7 @@
         // Глобальные функции
         window.forceDownload = forceDownload;
         window.copyToClipboard = copyToClipboard;
+        window.closeModal = closeModal;
     </script>
 </body>
 </html>
