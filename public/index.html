@@ -583,7 +583,7 @@
             </div>
             
             <div class="form-group">
-                <label>Ключ доступ</label>
+                <label>Ключ доступа</label>
                 <input type="text" id="editKey">
             </div>
             
@@ -634,6 +634,8 @@
         // Хранилище клиентов
         let clients = JSON.parse(localStorage.getItem('iptv_clients')) || [];
         let currentClientId = null;
+        // Переменная для хранения оригинальных данных клиента перед редактированием
+        let originalClientData = null; 
 
         // Принудительная установка viewport если отсутствует
         function ensureViewport() {
@@ -766,7 +768,7 @@
                 }
                 return true;
             } catch (error) {
-                console.error('Ошибка сохранения:', error);
+                console.error('Ошибка синхронизации с GitHub:', error);
                 throw error;
             }
         }
@@ -950,6 +952,8 @@
                 `;
                 card.onclick = () => {
                     currentClientId = clients.findIndex(c => c.phone === client.phone);
+                    // Сохраняем оригинальные данные перед открытием модалки
+                    originalClientData = { ...client }; 
                     showClientInfo(client);
                 };
                 clientsList.appendChild(card);
@@ -1292,7 +1296,8 @@
             
             document.getElementById('editSaveBtn').addEventListener('click', async () => {
                 if (currentClientId !== null) {
-                    const client = clients[currentClientId];
+                    // Используем originalClientData для сохранения пароля и других старых данных
+                    const client = { ...originalClientData }; 
                     const name = document.getElementById('editClientName').value.trim();
                     const phone = document.getElementById('editPhone').value.trim();
                     const key = document.getElementById('editKey').value.trim();
@@ -1307,8 +1312,9 @@
                         return;
                     }
                     
-                    // Обновляем данные клиента
+                    // Обновляем данные клиента в локальном массиве, объединяя старые данные с новыми
                     clients[currentClientId] = {
+                        ...client, // Старые данные (включая сохраненный password)
                         name,
                         phone: extractPhoneNumber(phone),
                         key,
@@ -1323,6 +1329,7 @@
                             await createPlaylist(clients[currentClientId].phone, key);
                         }
 
+                        // Сохраняем объединенный объект, который теперь содержит password
                         await saveClients();
                         
                         renderClients();
@@ -1331,6 +1338,8 @@
                         // Показываем обновленную информацию о клиенте
                         showClientInfo(clients[currentClientId]);
                     } catch (error) {
+                        // Если сохранение на GitHub не удалось, откатываем изменения в локальном массиве
+                        clients[currentClientId] = originalClientData; 
                         showEditStatus(`Ошибка сохранения: ${error.message}`, "error");
                     }
                 }
