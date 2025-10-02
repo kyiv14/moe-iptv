@@ -1,6 +1,6 @@
 // Serverless Function: api/playlist_link.js
 
-// КОНФИГУРАЦИЯ (ОБЯЗАТЕЛЬНО ИЗМЕНИТЕ ЭТИ ЗНАЧЕНИЯ)
+// КОНФИГУРАЦИЯ (ПРОВЕРЬТЕ И ПРИ НЕОБХОДИМОСТИ ИЗМЕНИТЕ)
 const GITHUB_OWNER = 'kyiv14';
 const GITHUB_REPO = 'moe-iptv'; 
 const CLIENTS_FILE_PATH = 'public/clients.json'; // Путь к файлу с данными клиентов
@@ -12,17 +12,17 @@ const BASE_URL = 'https://moe-iptv.vercel.app/'; // Базовый домен д
 
 /**
  * Вспомогательная функция для получения данных клиентов с GitHub.
- * В продакшене рекомендуется использовать токен для приватных репозиториев или
- * кешировать данные, чтобы не делать запрос при каждом обращении.
  */
 async function fetchClients() {
     // ВАЖНО: Используйте прямую (RAW) ссылку на ваш clients.json
     const rawUrl = `https://raw.githubusercontent.com/${GITHUB_OWNER}/${GITHUB_REPO}/main/${CLIENTS_FILE_PATH}`;
     
     try {
-        const response = await fetch(rawUrl, { cache: 'no-store' }); // Отключаем кеширование
+        // Убедитесь, что эта ссылка доступна без аутентификации
+        const response = await fetch(rawUrl, { cache: 'no-store' }); 
         if (!response.ok) {
-            throw new Error(`Ошибка загрузки clients.json: ${response.status}`);
+            console.error(`Ошибка загрузки clients.json: ${response.status} ${response.statusText}`);
+            return null;
         }
         const data = await response.json();
         return data;
@@ -44,6 +44,7 @@ export default async function handler(req, res) {
 
     const clients = await fetchClients();
     if (!clients) {
+        // Если данные не загружены, возвращаем ошибку
         return res.status(503).send('Сервис временно недоступен (ошибка загрузки данных).');
     }
     
@@ -51,26 +52,47 @@ export default async function handler(req, res) {
     const client = clients.find(c => c.phone === phone);
 
     if (!client || !client.registration_date) {
+        // Если клиент не найден или нет даты регистрации (как вы видели ранее)
         return res.status(404).send('Клиент не найден или нет даты регистрации.');
     }
 
-    // Проверка тестового периода (5 минут)
+    // --- ЛОГИКА ОПРЕДЕЛЕНИЯ ПЛЕЙЛИСТА ---
     const registrationTime = new Date(client.registration_date).getTime();
     const currentTime = new Date().getTime();
     const elapsedTime = currentTime - registrationTime;
 
     let targetUrl;
+    let filename;
     
     if (elapsedTime < TEST_DURATION_MS) {
         // Менее 5 минут прошло: даем тестовый плейлист
         targetUrl = TEST_PLAYLIST_URL; 
+        filename = `test_playlist_${phone}.m3u8`;
     } else {
         // 5 минут прошло: даем основной плейлист
-        // Основной плейлист должен называться [номер].m3u
         targetUrl = `${BASE_URL}${phone}.m3u`;
+        filename = `iptv_playlist_${phone}.m3u`;
     }
+    // ------------------------------------
 
-    // Выполняем HTTP-перенаправление (302 Found - временное)
-    res.setHeader('Location', targetUrl);
-    res.status(302).send('Redirecting to playlist...');
+    try {
+        // 1. Загружаем контент плейлиста
+        const playlistResponse = await fetch(targetUrl);
+        if (!playlistResponse.ok) {
+            console.error(`Ошибка загрузки целевого плейлиста с URL: ${targetUrl}`);
+            return res.status(502).send('Ошибка загрузки плейлиста с внешнего источника.');
+        }
+        const playlistContent = await playlistResponse.text();
+
+        // 2. Устанавливаем заголовки для принудительного скачивания
+        res.setHeader('Content-Type', 'application/x-mpegurl'); // MIME-тип для .m3u/.m3u8
+        res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+        
+        // 3. Отправляем контент с кодом 200 (OK)
+        res.status(200).send(playlistContent);
+
+    } catch (error) {
+        console.error("Критическая ошибка при обработке плейлиста:", error);
+        res.status(500).send('Внутренняя ошибка сервера при скачивании.');
+    }
 }
