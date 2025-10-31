@@ -1,0 +1,1 @@
+epg2/*.xml filter=lfs diff=lfs merge=lfs -text
